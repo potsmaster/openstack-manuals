@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section version="5.0" xml:id="hp-msa-driver"
+         xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:ns5="http://www.w3.org/1999/xhtml"
+         xmlns:ns4="http://www.w3.org/1998/Math/MathML"
+         xmlns:ns3="http://www.w3.org/2000/svg"
+         xmlns:ns="http://docbook.org/ns/docbook">
+  <title>HP MSA Fibre Channel and iSCSI drivers</title>
+
+  <para>The <filename>HPMSAFCDriver</filename> and
+  <filename>HPMSAISCSIDriver</filename> Cinder drivers allow HP MSA arrays to
+  be used for block storage in OpenStack deployments.</para>
+
+  <section xml:id="hp-msa-sys-reqs">
+    <title>System requirements</title>
+
+    <para>To use the HP MSA drivers, the following are required:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>HP MSA 2040 or 1040 array with:</para>
+
+        <itemizedlist>
+          <listitem>
+            <para>iSCSI or FC host interfaces</para>
+          </listitem>
+
+          <listitem>
+            <para>G22x firmware or later</para>
+          </listitem>
+        </itemizedlist>
+      </listitem>
+
+      <listitem>
+        <para>Network connectivity between the OpenStack host and the array
+        management interfaces</para>
+      </listitem>
+
+      <listitem>
+        <para>HTTPS or HTTP must be enabled on the array</para>
+      </listitem>
+    </itemizedlist>
+  </section>
+
+  <section xml:id="hp-msa-supported-ops">
+    <title>Supported operations</title>
+
+    <itemizedlist>
+      <listitem>
+        <para>Volume Create/Delete</para>
+      </listitem>
+
+      <listitem>
+        <para>Volume Attach/Detach</para>
+      </listitem>
+
+      <listitem>
+        <para>Snapshot Create/Delete</para>
+      </listitem>
+
+      <listitem>
+        <para>Create Volume from Snapshot</para>
+      </listitem>
+
+      <listitem>
+        <para>Get Volume Stats</para>
+      </listitem>
+
+      <listitem>
+        <para>Copy Image to Volume</para>
+      </listitem>
+
+      <listitem>
+        <para>Copy Volume to Image</para>
+      </listitem>
+
+      <listitem>
+        <para>Clone Volume</para>
+      </listitem>
+
+      <listitem>
+        <para>Extend Volume</para>
+      </listitem>
+    </itemizedlist>
+  </section>
+
+  <section xml:id="configure-hpmsa-array">
+    <title>Configuring the array</title>
+
+    <procedure>
+      <step>
+        <para>Verify that the array can be managed via an HTTPS connection.
+        HTTP can also be used if
+        <userinput>hpmsa_api_protocol=http</userinput> is placed into the
+        appropriate sections of the <filename>cinder.conf</filename>
+        file.</para>
+
+        <para>Confirm that virtual pools A and B are present if you plan to
+        use virtual pools for OpenStack storage.</para>
+
+        <para>If you plan to use vdisks instead of virtual pools, create or
+        identify one or more vdisks to be used for OpenStack storage;
+        typically this will mean creating or setting aside one disk group for
+        each of the A and B controllers.</para>
+      </step>
+
+      <step>
+        <para>Create two entries for storage backends in the
+        <filename>cinder.conf</filename> file, one for each storage pool to be
+        used with OpenStack. You will need to enter: the appropriate driver
+        name; IP address or hostname of the management interface; the username
+        and password of an array user account with 'manage' privileges; and
+        the iSCSI IP addresses if using the iSCSI transport protocol. This
+        information will be repeated in each entry.</para>
+
+        <para>In the examples below, the first two entries are different for
+        each entry; the <userinput>volume_backend_name</userinput> value
+        should match the name of the backend entry, and the
+        <userinput>hpmsa_backend_name</userinput> value must be the name of
+        the storage pool or vdisk on the array.</para>
+
+        <bridgehead>iSCSI example backend entries for
+        cinder.conf:</bridgehead>
+
+        <programlisting>[hpmsa-a]
+volume_backend_name = hpmsa-a
+hpmsa_backend_name = A
+volume_driver = cinder.volume.drivers.san.hp.hpmsa_iscsi.HPMSAISCSIDriver
+san_ip = 10.1.2.3
+san_login = manage
+san_password = !manage
+hpmsa_backend_name = A
+hpmsa_iscsi_ips = 10.2.3.4,10.2.3.5
+
+[hpmsa-b]
+volume_backend_name = hpmsa-b
+hpmsa_backend_name = B
+volume_driver = cinder.volume.drivers.san.hp.hpmsa_iscsi.HPMSAISCSIDriver
+san_ip = 10.1.2.3
+san_login = manage
+san_password = !manage
+hpmsa_iscsi_ips = 10.2.3.4,10.2.3.5
+</programlisting>
+
+        <para><bridgehead>Fibre Channel example backend entries for
+        cinder.conf:</bridgehead><programlisting>[hpmsa-a]
+volume_backend_name = hpmsa-a
+hpmsa_backend_name = A
+volume_driver = cinder.volume.drivers.san.hp.hpmsa_fc.HPMSAFCDriver
+san_ip = 10.1.2.3
+san_login = manage
+san_password = !manage
+
+[hpmsa-b]
+volume_backend_name = hpmsa-b
+hpmsa_backend_name = B
+volume_driver = cinder.volume.drivers.san.hp.hpmsa_fc.HPMSAFCDriver
+san_ip = 10.1.2.3
+san_login = manage
+san_password = !manage
+</programlisting></para>
+      </step>
+
+      <step>
+        <para>If any <userinput>volume_backend_name</userinput> value refers
+        to a vdisk rather a virtual pool, add an additional statement
+        <userinput>hpmsa_backend_type = linear</userinput> to that backend
+        entry.</para>
+      </step>
+
+      <step>
+        <para>If HTTPS is not enabled in the array, include
+        <userinput>hpmsa_api_protocol = http</userinput> in each of the
+        entries.</para>
+      </step>
+
+      <step>
+        <para>If HTTPS is enabled, certificate verification can be enabled
+        with the option <userinput>hpmsa_verify_certificate=True</userinput>.
+        The <userinput>hpmsa_verify_certificate_path</userinput> can be used
+        to pass a path to a CA_BUNDLE file to specify CAs other than the
+        default list. </para>
+      </step>
+
+      <step>
+        <para>Modify the <userinput>[DEFAULT]</userinput> section of the
+        <filename>cinder.conf</filename> file to reference the two backend
+        entries, editing the default_volume_type and enabled_backends
+        parameters:</para>
+
+        <programlisting>[DEFAULT]
+  :
+default_volume_type = hpmsa-a
+enabled_backends = hpmsa-a,hpmsa-b
+  :</programlisting>
+      </step>
+
+      <step>
+        <para>After modifying cinder.conf, restart the cinder-volume
+        service.</para>
+      </step>
+    </procedure>
+  </section>
+</section>
